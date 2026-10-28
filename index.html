@@ -46,8 +46,10 @@ input,textarea,select{width:100%;padding:11px;margin:6px 0;border:1px solid #888
 <label>Course</label>
 <select id="setupCourse">
 <option>BCS - Computer Science</option>
+  <option>DCS-Computer Science</option>
 <option>BBC - Business Computing</option>
 <option>BIT - Information Technology</option>
+<option>DIT-Information Technology</option>  
 <option>BBA - Business Admin</option>
 <option>EDU - Education</option>
 <option>BMC - Mass Communication</option>
@@ -78,6 +80,8 @@ genCaptcha();
 function autoDetectCourse(reg){
   reg = reg.toUpperCase();
   if(reg.includes("/BCS/")) return "BCS - Computer Science";
+  if(reg.includes("/DCS/"))return"DCS-Computer Science";
+  if(reg.includes("/DIT/"))return"DIT-Information Technology";
   if(reg.includes("/BBC/")) return "BBC - Business Computing";
   if(reg.includes("/BIT/")) return "BIT - Information Technology";
   if(reg.includes("/BBA/")) return "BBA - Business Admin";
