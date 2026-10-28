@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MIU Student Portal</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Arial;background:#eef1f6}
+header{background:#0B3D91;color:white;padding:14px;text-align:center;font-weight:bold}
+#loginScreen,#setupScreen{max-width:420px;margin:30px auto;background:white;padding:22px;border-radius:12px;box-shadow:0 4px 12px #aaa}
+#setupScreen{display:none}
+#mainApp{display:none}
+nav{display:flex;background:white;box-shadow:0 2px 5px #ccc}
+nav button{flex:1;padding:12px;border:none;background:white;color:#0B3D91;font-weight:bold;cursor:pointer}
+nav button.active{background:#0B3D91;color:white}
+.page{display:none;max-width:850px;margin:12px auto;background:white;padding:16px;border-radius:10px}
+.page.active{display:block}
+input,textarea,select{width:100%;padding:11px;margin:6px 0;border:1px solid #888;border-radius:6px}
+.btn{width:100%;padding:12px;background:#0A7A3D;color:white;border:none;border-radius:6px;font-weight:bold;cursor:pointer;margin-top:8px}
+.card{border:1px solid #ddd;padding:12px;border-radius:8px;margin:8px 0;background:#fafbff;line-height:1.8}
+.captchaBox{background:#eef;border:2px dashed #0B3D91;padding:10px;text-align:center;font-weight:bold;font-size:20px;border-radius:6px}
+</style>
+</head>
+<body>
+<header>METROPOLITAN INTERNATIONAL UNIVERSITY<br>Student E-Portal System</header>
+
+<div id="loginScreen">
+<h3 style="color:#0B3D91;text-align:center">Student Login</h3>
+<label>Registration Number</label>
+<input id="regInput" placeholder="e.g. 26/BCS/022/UMC/D">
+<label>Password</label>
+<input type="password" id="passInput" placeholder="Any password">
+<div class="captchaBox" id="captchaDisplay"></div>
+<input id="captchaInput" placeholder="Captcha answer">
+<p id="errorMsg" style="color:red;display:none;text-align:center;font-weight:bold"></p>
+<button class="btn" onclick="doLogin()">LOGIN</button>
+</div>
+
+<div id="setupScreen">
+<h3 style="color:#0B3D91;text-align:center">Welcome New Student</h3>
+<p>We don't have your details. Please enter once:</p>
+<label>Registration Number</label>
+<input id="setupReg" readonly>
+<label>Your Full Name</label>
+<input id="setupName" autocomplete="off" placeholder="Enter your full name e.g. MUKASA OBAID">
+<label>Course</label>
+<select id="setupCourse">
+<option>BCS - Computer Science</option>
+<option>BBC - Business Computing</option>
+<option>BIT - Information Technology</option>
+<option>BBA - Business Admin</option>
+<option>EDU - Education</option>
+<option>BMC - Mass Communication</option>
+</select>
+<button class="btn" onclick="saveNewStudent()">SAVE & CONTINUE</button>
+</div>
+
+<div id="mainApp">
+<nav>
+<button class="active" onclick="showPage('profile',this)">PROFILE</button>
+<button onclick="showPage('fees',this)">FEES</button>
+<button onclick="showPage('results',this)">RESULTS</button>
+<button onclick="showPage('contact',this)">CONTACT</button>
+<button onclick="logout()" style="color:red">LOGOUT</button>
+</nav>
+<div id="profile" class="page active"><h3>Student Profile</h3><div class="card"><p><b>Reg No:</b> <span id="displayReg"></span></p><p><b>Full Name:</b> <span id="displayName"></span></p><p><b>Course:</b> <span id="displayCourse"></span></p><p><b>Status:</b> <span style="background:green;color:white;padding:4px 12px;border-radius:10px">ACTIVE</span></p></div></div>
+<div id="fees" class="page"><h3>Fees</h3><div class="card"><p>Student: <b><span class="regCopy"></span></b> - <span class="nameCopy"></span></p><p>Balance: <span style="color:green">0 - CLEAR</span></p></div></div>
+<div id="results" class="page"><h3>Results</h3><div class="card"><p>Results for <b><span class="regCopy"></span> - <span class="nameCopy"></span></b></p></div></div>
+<div id="contact" class="page"><h3>Contact Admin</h3><div class="card"><p>Phone: 0743591831</p><p>Email: mukasaobidi2026@gmail.com</p><hr><input id="msgReg" readonly><textarea id="msgText" rows="4" placeholder="Your problem..."></textarea><button class="btn" style="background:#25D366" onclick="sendWhatsApp()">SEND VIA WHATSAPP</button></div></div>
+</div>
+
+<script>
+let captchaAnswer=0;
+function genCaptcha(){let a=Math.floor(Math.random()*10)+1,b=Math.floor(Math.random()*10)+1;captchaAnswer=a+b;document.getElementById('captchaDisplay').innerText=a+' + '+b+' = ?';}
+genCaptcha();
+
+// ===== THIS IS THE FIX FOR BBC vs BCS =====
+function autoDetectCourse(reg){
+  reg = reg.toUpperCase();
+  if(reg.includes("/BCS/")) return "BCS - Computer Science";
+  if(reg.includes("/BBC/")) return "BBC - Business Computing";
+  if(reg.includes("/BIT/")) return "BIT - Information Technology";
+  if(reg.includes("/BBA/")) return "BBA - Business Admin";
+  if(reg.includes("/BMC/")) return "BMC - Mass Communication";
+  if(reg.includes("/EDU/")) return "EDU - Education";
+  return "BCS - Computer Science";
+}
+
+function doLogin(){
+ let reg=document.getElementById('regInput').value.trim().toUpperCase();
+ let cap=parseInt(document.getElementById('captchaInput').value);
+ let err=document.getElementById('errorMsg');
+ if(!reg){err.style.display='block';err.innerText='Enter Reg No';return;}
+ if(isNaN(cap)||cap!==captchaAnswer){err.style.display='block';err.innerText='Wrong Captcha';genCaptcha();document.getElementById('captchaInput').value='';return;}
+ let allStudents = JSON.parse(localStorage.getItem('MIU_STUDENTS') || '{}');
+ if(allStudents[reg]){
+   showPortal(allStudents[reg]);
+ } else {
+   // NEW STUDENT - CLEAR OLD NAME AND AUTO-SELECT COURSE
+   document.getElementById('loginScreen').style.display='none';
+   document.getElementById('setupScreen').style.display='block';
+   document.getElementById('setupReg').value=reg;
+   document.getElementById('setupName').value=""; // CLEAR MUKASA NAME BUG
+   // AUTO SELECT COURSE BASED ON REG
+   let detected = autoDetectCourse(reg);
+   let sel = document.getElementById('setupCourse');
+   for(let i=0;i<sel.options.length;i++){
+     if(sel.options[i].value===detected){ sel.selectedIndex=i; break; }
+   }
+ }
+}
+
+function saveNewStudent(){
+ let reg=document.getElementById('setupReg').value;
+ let name=document.getElementById('setupName').value.trim().toUpperCase();
+ let course=document.getElementById('setupCourse').value;
+ if(!name){alert('Enter your name');return;}
+ let allStudents = JSON.parse(localStorage.getItem('MIU_STUDENTS') || '{}');
+ allStudents[reg]={reg:reg,name:name,course:course};
+ localStorage.setItem('MIU_STUDENTS',JSON.stringify(allStudents));
+ showPortal(allStudents[reg]);
+}
+
+function showPortal(stud){
+ document.getElementById('loginScreen').style.display='none';
+ document.getElementById('setupScreen').style.display='none';
+ document.getElementById('mainApp').style.display='block';
+ document.getElementById('displayReg').innerText=stud.reg;
+ document.getElementById('displayName').innerText=stud.name;
+ document.getElementById('displayCourse').innerText=stud.course;
+ document.getElementById('msgReg').value=stud.reg;
+ document.querySelectorAll('.regCopy').forEach(e=>e.innerText=stud.reg);
+ document.querySelectorAll('.nameCopy').forEach(e=>e.innerText=stud.name);
+}
+function showPage(id,btn){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));document.getElementById(id).classList.add('active');if(btn)btn.classList.add('active');}
+function logout(){document.getElementById('mainApp').style.display='none';document.getElementById('loginScreen').style.display='block';genCaptcha();document.getElementById('regInput').value='';document.getElementById('captchaInput').value='';}
+function sendWhatsApp(){let reg=document.getElementById('msgReg').value;let text=document.getElementById('msgText').value;if(!text){alert('Type message');return;}window.open(`https://wa.me/256743591831?text=Hello Admin, I am ${reg} - ${document.getElementById('displayName').innerText}%0A${encodeURIComponent(text)}`,'_blank');}
+</script>
+</body>
+</html>
